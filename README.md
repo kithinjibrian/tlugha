@@ -1,5 +1,4 @@
 # Typescript interpreter for the Lugha programming language
----
 
 # Installation
 

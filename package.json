@@ -1,6 +1,6 @@
 {
-    "name": "@kithinji/lugha",
-    "version": "1.0.8",
+    "name": "@kithinji/tlugha",
+    "version": "1.0.0",
     "main": "dist/main.js",
     "module": "dist/main.mjs",
     "types": "dist/main.d.ts",
@@ -27,12 +27,12 @@
     },
     "repository": {
         "type": "git",
-        "url": "git://github.com/kithinjibrian/lugha.git"
+        "url": "git://github.com/kithinjibrian/tlugha.git"
     },
     "bugs": {
-        "url": "https://github.com/kithinjibrian/lugha/issues"
+        "url": "https://github.com/kithinjibrian/tlugha/issues"
     },
-    "homepage": "https://github.com/kithinjibrian/lugha#readme",
+    "homepage": "https://github.com/kithinjibrian/tlugha#readme",
     "dependencies": {
         "path-browserify": "^1.0.1",
         "sync-request": "^6.1.0"

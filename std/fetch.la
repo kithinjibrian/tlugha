@@ -1,0 +1,7 @@
+fun get<T>(url: string): T {
+  return __http_get__(url);
+}
+
+fun post<D, H, R>(url: string, data: D, headers: H): R {
+    return __http_post__(url, data, headers);
+}

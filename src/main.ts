@@ -1,4 +1,4 @@
-import { builtin, exec } from "./types";
+import { exec } from "./types";
 
 export * from "./types";
 

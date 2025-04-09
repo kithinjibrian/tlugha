@@ -69,7 +69,7 @@ export class Engine implements ASTVisitor {
         this.plugins.forEach(plugin => plugin.beforeAccept?.(node, this, args));
     }
 
-    public visit(node?: ASTNode, args?: Record<string, any>): void {
+    public async visit(node?: ASTNode, args?: Record<string, any>): Promise<void> {
         if (node == undefined) return;
 
         const handledByPlugin = this.plugins.some(plugin =>
@@ -78,7 +78,7 @@ export class Engine implements ASTVisitor {
 
         if (!handledByPlugin) {
             try {
-                node.accept(this, args);
+                await node.accept(this, args);
             } catch (error) {
                 throw error;
             }
@@ -92,7 +92,7 @@ export class Engine implements ASTVisitor {
         this.plugins.forEach(plugin => plugin.afterAccept?.(node, this, args));
     }
 
-    private execute_function(
+    private async execute_function(
         fn: FunctionDecNode,
         args: Type<any>[],
         frame: Frame
@@ -138,35 +138,39 @@ export class Engine implements ASTVisitor {
 
             const filtered = inbuilt.filter
                 ? inbuilt.filter(args)
-                : args.map(i => i.getValue())
+                : args.map(i => i.getValue());
 
-            let value = inbuilt.exec(filtered);
-
-            if (value) {
-                frame.stack.push(create_object(value));
+            let value;
+            if (inbuilt.async) {
+                value = await inbuilt.exec(filtered);
+            } else {
+                value = inbuilt.exec(filtered)
             }
+
+            if (value)
+                frame.stack.push(create_object(value))
         } else {
-            this.visit(fn.body, { frame: new_frame })
+            await this.visit(fn.body, { frame: new_frame })
             if (new_frame.return_value)
                 frame.stack.push(new_frame.return_value);
         }
     }
 
-    run(before_run?: Function[]) {
+    async run(before_run?: Function[]) {
         if (before_run) {
-            before_run.map((fn) => fn({
+            before_run.map(async (fn) => await fn({
                 root: this.root,
                 current: this.current
             }))
         }
 
-        this.visit(this.ast, { frame: this.root.frame })
+        await this.visit(this.ast, { frame: this.root.frame })
         return this;
     }
 
-    call_main() {
+    async call_main() {
         let main = this.root.frame.get("main");
-        this.execute_function(main, [], this.root.frame);
+        await this.execute_function(main, [], this.root.frame);
         let ret = this.root.frame.stack.pop();
 
         if (ret) {
@@ -175,27 +179,27 @@ export class Engine implements ASTVisitor {
         return null;
     }
 
-    visitProgram(node: ProgramNode, args?: Record<string, any>) {
-        this.visit(node.program, args);
+    async visitProgram(node: ProgramNode, args?: Record<string, any>) {
+        await this.visit(node.program, args);
     }
 
-    visitSourceElements(
+    async visitSourceElements(
         node: SourceElementsNode,
         args?: Record<string, any>
     ) {
-        node.sources.forEach(src => {
-            this.visit(src, args);
+        node.sources.forEach(async src => {
+            await this.visit(src, args);
         });
     }
 
-    visitExpressionStatement(
+    async visitExpressionStatement(
         node: ExpressionStatementNode,
         args?: Record<string, any>
     ) {
-        this.visit(node.expression, args);
+        await this.visit(node.expression, args);
     }
 
-    visitModule(
+    async visitModule(
         node: ModuleNode,
         args?: Record<string, any>
     ) {
@@ -204,8 +208,8 @@ export class Engine implements ASTVisitor {
         this.current.add_submodule(new_module);
         this.current = new_module;
 
-        node.body.forEach((src) => {
-            this.visit(src, {
+        node.body.forEach(async (src) => {
+            await this.visit(src, {
                 ...args,
                 frame: new_module.frame,
             });
@@ -214,7 +218,7 @@ export class Engine implements ASTVisitor {
         this.current = cache;
     }
 
-    visitImport(
+    async visitImport(
         node: ImportNode,
         args?: Record<string, any>
     ) {
@@ -234,14 +238,14 @@ export class Engine implements ASTVisitor {
         let module = new Module(node.identifier.name);
         this.current.add_submodule(module);
 
-        this.lugha({
+        await this.lugha({
             file: `${name}.la`,
             wd: this.wd,
             module
         })
     }
 
-    visitUse(node: UseNode, { frame }: { frame: Frame }) {
+    async visitUse(node: UseNode, { frame }: { frame: Frame }) {
         const self = this;
         function resolveModule(path: string[]): Module | undefined {
             let mod = self.root.children.find(m => m.name === path[0]);
@@ -274,28 +278,28 @@ export class Engine implements ASTVisitor {
         }
     }
 
-    visitFunctionDec(
+    async visitFunctionDec(
         node: FunctionDecNode,
         { frame }: { frame: Frame }
     ) {
         frame.define(node.identifier.name, node);
     }
 
-    visitLambda(
+    async visitLambda(
         node: LambdaNode,
         { frame }: { frame: Frame }
     ) {
         frame.stack.push(new LambdaType(node));
     }
 
-    visitBlock(
+    async visitBlock(
         node: BlockNode,
         { frame }: { frame: Frame }
     ) {
         const new_frame = new Frame(frame);
 
         for (const n of node.body) {
-            this.visit(n, { frame: new_frame });
+            await this.visit(n, { frame: new_frame });
 
             if (
                 new_frame.return_flag ||
@@ -312,46 +316,45 @@ export class Engine implements ASTVisitor {
         frame.return_value = new_frame.return_value;
     }
 
-    visitCallExpression(
+    async visitCallExpression(
         node: CallExpressionNode,
         { frame }: { frame: Frame }
     ) {
-
         const evaluatedArgs: Type<any>[] = [];
         for (const arg of node.args) {
-            this.visit(arg, { frame });
+            await this.visit(arg, { frame });
             const argValue = frame.stack.pop();
             if (!argValue) throw new Error("Stack underflow - argument evaluation");
             evaluatedArgs.push(argValue);
         }
 
         if (node.callee instanceof ScopedIdentifierNode) {
-            this.visit(node.callee, { frame });
+            await this.visit(node.callee, { frame });
             const fn: FunctionType = frame.stack.pop();
             if (!fn) {
                 throw new Error(`Function ${node.callee.name[0]} is not defined`);
             }
 
-            this.execute_function(fn.getValue(), evaluatedArgs, frame);
+            await this.execute_function(fn.getValue(), evaluatedArgs, frame);
         } else {
-            this.visit(node.callee, { frame, args: evaluatedArgs });
+            await this.visit(node.callee, { frame, args: evaluatedArgs });
             const fn = frame.stack.pop() as FunctionType;
 
-            this.execute_function(fn.getValue(), evaluatedArgs, frame);
+            await this.execute_function(fn.getValue(), evaluatedArgs, frame);
         }
 
     }
 
-    visitMemberExpression(
+    async visitMemberExpression(
         node: MemberExpressionNode,
         { frame, args }: { frame: Frame, args: Type<any>[] }
     ) {
-        this.visit(node.object, { frame });
+        await this.visit(node.object, { frame });
         const object = frame.stack.pop() as Type<any>;
 
         let propertyValue: Type<any>;
         if (node.computed) {
-            this.visit(node.property, { frame });
+            await this.visit(node.property, { frame });
             propertyValue = frame.stack.pop() as Type<any>;
         } else {
             let name = (node.property as IdentifierNode).name;
@@ -366,21 +369,21 @@ export class Engine implements ASTVisitor {
         frame.stack.push(value);
     }
 
-    visitVariableList(
+    async visitVariableList(
         node: VariableStatementNode,
         args?: Record<string, any>
     ) {
-        this.visit(node.variables, args);
+        await this.visit(node.variables, args);
     }
 
-    visitVariable(
+    async visitVariable(
         node: VariableNode,
         { frame }: { frame: Frame }
     ) {
         let value: Type<any> | null = null;
 
         if (node.expression) {
-            this.visit(node.expression, { frame });
+            await this.visit(node.expression, { frame });
             value = frame.stack.pop() as Type<any>;
         }
 
@@ -392,15 +395,15 @@ export class Engine implements ASTVisitor {
         }
     }
 
-    visitBinaryOp(
+    async visitBinaryOp(
         node: BinaryOpNode,
         { frame }: { frame: Frame }
     ) {
-        this.visit(node.left, { frame })
+        await this.visit(node.left, { frame })
         const left = frame.stack.pop();
         if (!left) throw new Error("Stack underflow - left operand");
 
-        this.visit(node.right, { frame })
+        await this.visit(node.right, { frame })
         const right = frame.stack.pop();
         if (!right) throw new Error("Stack underflow - right operand");
 
@@ -440,7 +443,7 @@ export class Engine implements ASTVisitor {
         frame.stack.push(result);
     }
 
-    visitScopedIdentifier(
+    async visitScopedIdentifier(
         node: ScopedIdentifierNode,
         { frame }: { frame: Frame }
     ) {
@@ -491,69 +494,74 @@ export class Engine implements ASTVisitor {
             __p(frame, current.frame, node.name[node.name.length - 1])
     }
 
-    visitReturn(
+    async visitReturn(
         node: ReturnNode,
         { frame }: { frame: Frame }
     ) {
         if (node.expression) {
-            this.visit(node.expression, { frame });
+            await this.visit(node.expression, { frame });
             frame.return_value = frame.stack.pop() as Type<any>;
         }
 
         frame.return_flag = true;
     }
 
-    visitMap(
+    async visitMap(
         node: MapNode,
         { frame }: { frame: Frame }
     ) {
-        // TODO: check visit
-        const objectProperties = node.properties.reduce((acc, propNode) => {
-            this.visit(propNode.value, { frame })
+        const objectProperties: Record<string, Type<any>> = {};
+
+        for (const propNode of node.properties) {
+            await this.visit(propNode.value, { frame });
             const value = frame.stack.pop() as Type<any>;
 
             let key: string = propNode.key;
 
-            acc[key] = value;
-
-            return acc;
-        }, {} as Record<string, Type<any>>);
+            objectProperties[key] = value;
+        }
 
         frame.stack.push(new MapType(objectProperties));
     }
 
-    visitSet(
+    async visitSet(
         node: SetNode,
         { frame }: { frame: Frame }
     ) {
-        frame.stack.push(new SetType(node.values.map(src => {
-            this.visit(src, { frame })
+        const values = await Promise.all(node.values.map(async (src) => {
+            await this.visit(src, { frame });
             return frame.stack.pop() as Type<any>;
-        })));
+        }));
+
+        frame.stack.push(new SetType(values));
     }
 
-    visitArray(node: ArrayNode, { frame }: { frame: Frame }) {
-        frame.stack.push(new ArrayType(node.elements.map(src => {
-            this.visit(src, { frame })
+    async visitArray(node: ArrayNode, { frame }: { frame: Frame }) {
+        const values = await Promise.all(node.elements.map(async (src) => {
+            await this.visit(src, { frame });
             return frame.stack.pop() as Type<any>;
-        })));
+        }));
+
+        frame.stack.push(new ArrayType(values));
     }
 
-    visitTuple(node: TupleNode, { frame }: { frame: Frame }) {
-        frame.stack.push(new TupleType(node.values.map(src => {
-            this.visit(src, { frame })
+    async visitTuple(node: TupleNode, { frame }: { frame: Frame }) {
+        const values = await Promise.all(node.values.map(async (src) => {
+            await this.visit(src, { frame });
             return frame.stack.pop() as Type<any>;
-        })));
+        }));
+
+        frame.stack.push(new TupleType(values));
     }
 
-    visitNumber(
+    async visitNumber(
         node: NumberNode,
         { frame }: { frame: Frame }
     ) {
         frame.stack.push(new NumberType(node.value));
     }
 
-    visitString(
+    async visitString(
         node: StringNode,
         { frame }: { frame: Frame }
     ) {

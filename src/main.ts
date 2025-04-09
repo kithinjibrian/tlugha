@@ -1,13 +1,13 @@
-import { exec } from "./types";
+import { builtin, exec } from "./types";
 
 export * from "./types";
 
-function main() {
+async function main() {
     try {
-        const result = exec("code/app.la");
-        console.log(result)
+        await exec("code/app.la");
+        //console.log(result)
     } catch (e: any) {
-        console.log(`main error: \n\n ${e.message}`)
+        console.log(`main error: \n\n ${e}`)
     }
 }
 

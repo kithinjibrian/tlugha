@@ -8,7 +8,7 @@ import {
 import * as path from 'path-browserify';
 import { readFileSync } from "fs"
 
-export function lugha({
+export async function lugha({
     file,
     wd,
     module,
@@ -18,7 +18,7 @@ export function lugha({
     wd: string,
     module: Module,
     before_run?: Function[]
-}): Engine {
+}): Promise<Engine> {
     const file_path = path.join(wd, file);
     const code = readFileSync(file_path, 'utf-8')
 

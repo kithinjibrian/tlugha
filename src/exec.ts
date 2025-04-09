@@ -1,25 +1,27 @@
+import { create_object } from "./objects/create";
 import {
     BlockNode,
     builtin,
     FunctionDecNode,
     IdentifierNode,
     lugha,
-    Module
+    Module,
+    VariableNode
 } from "./types";
 
 import * as path from 'path-browserify';
 
-export function exec(filepath: string) {
+export async function exec(filepath: string) {
     let module: Module = new Module("root");
     const a = path.parse(filepath)
 
     try {
-        return lugha({
+        const engine = await lugha({
             file: a.base,
             wd: a.dir,
             module,
             before_run: [
-                ({ root }: { root: Module }) => {
+                async ({ root }: { root: Module }) => {
                     Object.entries(builtin)
                         .map(([key, value]) => {
                             if (value.type == "function") {
@@ -31,15 +33,25 @@ export function exec(filepath: string) {
                                     value.async
                                 );
                                 root.frame.define(key, inbuiltFunction);
+                            } else if (value.type == "variable") {
+                                const inbuiltVariable = new VariableNode(
+                                    new IdentifierNode(key),
+                                    true,
+                                    false,
+                                    undefined,
+                                    create_object(value.value)
+                                );
+
+                                root.frame.define(key, inbuiltVariable);
                             }
                         })
                 },
-                ({ current }: { current: Module }) => {
+                async ({ current }: { current: Module }) => {
                     let module = new Module("std");
                     current.add_submodule(module);
 
                     try {
-                        lugha({
+                        await lugha({
                             file: "mod.la",
                             wd: path.join(__dirname, "../std"),
                             module
@@ -49,7 +61,9 @@ export function exec(filepath: string) {
                     }
                 }
             ]
-        }).call_main();
+        })
+
+        return await engine.call_main();
     } catch (error) {
         throw error;
     }

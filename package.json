@@ -34,7 +34,7 @@
     },
     "homepage": "https://github.com/kithinjibrian/tlugha#readme",
     "dependencies": {
-        "path-browserify": "^1.0.1",
-        "sync-request": "^6.1.0"
+        "axios": "^1.8.4",
+        "path-browserify": "^1.0.1"
     }
 }

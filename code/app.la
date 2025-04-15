@@ -1,5 +1,8 @@
+import lib;
+
+use lib::math::num::{ add };
 use std::io::{ print };
 
 fun main(): unit {
-   print("{}", __version__);
+   print("{}", add());
 }

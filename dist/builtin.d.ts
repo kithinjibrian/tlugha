@@ -4,7 +4,7 @@ export type Builtin = {
     async?: boolean;
     signature: string;
     filter?: (args: Type<any>[]) => any;
-    exec: Function;
+    exec: (args: Type<any>[]) => any;
 } | {
     type: "variable";
     signature?: string;

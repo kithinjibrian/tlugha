@@ -142,7 +142,11 @@ export class Engine implements ASTVisitor {
 
             let value;
             if (inbuilt.async) {
-                value = await inbuilt.exec(filtered);
+                try {
+                    value = await inbuilt.exec(filtered);
+                } catch (e: any) {
+                    value = e.message
+                }
             } else {
                 value = inbuilt.exec(filtered)
             }
@@ -222,27 +226,31 @@ export class Engine implements ASTVisitor {
         node: ImportNode,
         args?: Record<string, any>
     ) {
-        let name = node.identifier.name;
-        const file_path = path.join(this.wd, `${name}.la`);
+        const originalWd = this.wd;
+        const name = node.identifier.name;
 
-        if (!existsSync(file_path)) {
-            const sub_path = path.join(this.wd, name, "mod.la");
-            if (sub_path) {
-                this.wd = path.join(this.wd, name);
-                name = "mod"
+        const filePath = path.join(originalWd, `${name}.la`);
+        let fileToImport = `${name}.la`;
+        let importWd = originalWd;
+
+        if (!existsSync(filePath)) {
+            const subPath = path.join(originalWd, name, "__mod__.la");
+            if (existsSync(subPath)) {
+                fileToImport = "__mod__.la";
+                importWd = path.join(originalWd, name);
             } else {
                 throw new Error(`Couldn't find module: '${name}'`);
             }
         }
 
-        let module = new Module(node.identifier.name);
+        const module = new Module(node.identifier.name);
         this.current.add_submodule(module);
 
         await this.lugha({
-            file: `${name}.la`,
-            wd: this.wd,
+            file: fileToImport,
+            wd: importWd,
             module
-        })
+        });
     }
 
     async visitUse(node: UseNode, { frame }: { frame: Frame }) {

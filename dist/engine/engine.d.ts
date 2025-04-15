@@ -12,65 +12,65 @@ export declare class Engine implements ASTVisitor {
     constructor(ast: ASTNode, root: Module, wd: string, lugha: Function);
     plugin(p: Extension<any>): this;
     before_accept(node: ASTNode, args?: Record<string, any>): void;
-    visit(node?: ASTNode, args?: Record<string, any>): void;
+    visit(node?: ASTNode, args?: Record<string, any>): Promise<void>;
     after_accept(node: ASTNode, args?: Record<string, any>): void;
     private execute_function;
-    run(before_run?: Function[]): this;
-    call_main(): any;
-    visitProgram(node: ProgramNode, args?: Record<string, any>): void;
-    visitSourceElements(node: SourceElementsNode, args?: Record<string, any>): void;
-    visitExpressionStatement(node: ExpressionStatementNode, args?: Record<string, any>): void;
-    visitModule(node: ModuleNode, args?: Record<string, any>): void;
-    visitImport(node: ImportNode, args?: Record<string, any>): void;
+    run(before_run?: Function[]): Promise<this>;
+    call_main(): Promise<any>;
+    visitProgram(node: ProgramNode, args?: Record<string, any>): Promise<void>;
+    visitSourceElements(node: SourceElementsNode, args?: Record<string, any>): Promise<void>;
+    visitExpressionStatement(node: ExpressionStatementNode, args?: Record<string, any>): Promise<void>;
+    visitModule(node: ModuleNode, args?: Record<string, any>): Promise<void>;
+    visitImport(node: ImportNode, args?: Record<string, any>): Promise<void>;
     visitUse(node: UseNode, { frame }: {
         frame: Frame;
-    }): void;
+    }): Promise<void>;
     visitFunctionDec(node: FunctionDecNode, { frame }: {
         frame: Frame;
-    }): void;
+    }): Promise<void>;
     visitLambda(node: LambdaNode, { frame }: {
         frame: Frame;
-    }): void;
+    }): Promise<void>;
     visitBlock(node: BlockNode, { frame }: {
         frame: Frame;
-    }): void;
+    }): Promise<void>;
     visitCallExpression(node: CallExpressionNode, { frame }: {
         frame: Frame;
-    }): void;
+    }): Promise<void>;
     visitMemberExpression(node: MemberExpressionNode, { frame, args }: {
         frame: Frame;
         args: Type<any>[];
-    }): void;
-    visitVariableList(node: VariableStatementNode, args?: Record<string, any>): void;
+    }): Promise<void>;
+    visitVariableList(node: VariableStatementNode, args?: Record<string, any>): Promise<void>;
     visitVariable(node: VariableNode, { frame }: {
         frame: Frame;
-    }): void;
+    }): Promise<void>;
     visitBinaryOp(node: BinaryOpNode, { frame }: {
         frame: Frame;
-    }): void;
+    }): Promise<void>;
     visitScopedIdentifier(node: ScopedIdentifierNode, { frame }: {
         frame: Frame;
-    }): void;
+    }): Promise<void>;
     visitReturn(node: ReturnNode, { frame }: {
         frame: Frame;
-    }): void;
+    }): Promise<void>;
     visitMap(node: MapNode, { frame }: {
         frame: Frame;
-    }): void;
+    }): Promise<void>;
     visitSet(node: SetNode, { frame }: {
         frame: Frame;
-    }): void;
+    }): Promise<void>;
     visitArray(node: ArrayNode, { frame }: {
         frame: Frame;
-    }): void;
+    }): Promise<void>;
     visitTuple(node: TupleNode, { frame }: {
         frame: Frame;
-    }): void;
+    }): Promise<void>;
     visitNumber(node: NumberNode, { frame }: {
         frame: Frame;
-    }): void;
+    }): Promise<void>;
     visitString(node: StringNode, { frame }: {
         frame: Frame;
-    }): void;
+    }): Promise<void>;
 }
 //# sourceMappingURL=engine.d.ts.map

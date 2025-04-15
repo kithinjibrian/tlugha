@@ -4,5 +4,5 @@ export declare function lugha({ file, wd, module, before_run }: {
     wd: string;
     module: Module;
     before_run?: Function[];
-}): Engine;
+}): Promise<Engine>;
 //# sourceMappingURL=lugha.d.ts.map

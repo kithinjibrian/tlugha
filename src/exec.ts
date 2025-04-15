@@ -52,7 +52,7 @@ export async function exec(filepath: string) {
 
                     try {
                         await lugha({
-                            file: "mod.la",
+                            file: "__mod__.la",
                             wd: path.join(__dirname, "../std"),
                             module
                         })

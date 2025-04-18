@@ -2,6 +2,7 @@ import { NumberNode, StringNode } from "../types";
 import { ArrayType } from "./array";
 import { Type } from "./base";
 import { BoolType } from "./bool";
+import { DateType } from "./date";
 import { MapType } from "./map";
 import { NumberType } from "./number";
 import { StringType } from "./string";
@@ -31,6 +32,8 @@ export function create_object(value: any): Type<any> {
     } else if (typeof value == "object") {
         if (Array.isArray(value)) {
             return new ArrayType(value.map(v => create_object(v)))
+        } else if (value instanceof Date) {
+            return new DateType(value)
         } else {
             return new MapType(Object.entries(value).reduce((acc, [key, val]) => {
                 acc[key] = create_object(val);

@@ -65,7 +65,7 @@ export class Engine implements ASTVisitor {
         node: ASTNode,
         args?: Record<string, any>
     ) {
-        // console.log(node.type)
+        //console.log(node.type)
         this.plugins.forEach(plugin => plugin.beforeAccept?.(node, this, args));
     }
 
@@ -162,10 +162,12 @@ export class Engine implements ASTVisitor {
 
     async run(before_run?: Function[]) {
         if (before_run) {
-            before_run.map(async (fn) => await fn({
-                root: this.root,
-                current: this.current
-            }))
+            for (const fn of before_run) {
+                await fn({
+                    root: this.root,
+                    current: this.current
+                })
+            }
         }
 
         await this.visit(this.ast, { frame: this.root.frame })
@@ -191,9 +193,9 @@ export class Engine implements ASTVisitor {
         node: SourceElementsNode,
         args?: Record<string, any>
     ) {
-        node.sources.forEach(async src => {
+        for (const src of node.sources) {
             await this.visit(src, args);
-        });
+        }
     }
 
     async visitExpressionStatement(
@@ -212,12 +214,12 @@ export class Engine implements ASTVisitor {
         this.current.add_submodule(new_module);
         this.current = new_module;
 
-        node.body.forEach(async (src) => {
+        for (const src of node.body) {
             await this.visit(src, {
                 ...args,
                 frame: new_module.frame,
             });
-        })
+        }
 
         this.current = cache;
     }
@@ -536,28 +538,37 @@ export class Engine implements ASTVisitor {
         node: SetNode,
         { frame }: { frame: Frame }
     ) {
-        const values = await Promise.all(node.values.map(async (src) => {
+        const values = [];
+
+        for (const src of node.values) {
             await this.visit(src, { frame });
-            return frame.stack.pop() as Type<any>;
-        }));
+            const value = frame.stack.pop() as Type<any>;
+            values.push(value);
+        }
 
         frame.stack.push(new SetType(values));
     }
 
     async visitArray(node: ArrayNode, { frame }: { frame: Frame }) {
-        const values = await Promise.all(node.elements.map(async (src) => {
+        const values = [];
+
+        for (const src of node.elements) {
             await this.visit(src, { frame });
-            return frame.stack.pop() as Type<any>;
-        }));
+            const value = frame.stack.pop() as Type<any>;
+            values.push(value);
+        }
 
         frame.stack.push(new ArrayType(values));
     }
 
     async visitTuple(node: TupleNode, { frame }: { frame: Frame }) {
-        const values = await Promise.all(node.values.map(async (src) => {
+        const values = [];
+
+        for (const src of node.values) {
             await this.visit(src, { frame });
-            return frame.stack.pop() as Type<any>;
-        }));
+            const value = frame.stack.pop() as Type<any>;
+            values.push(value);
+        }
 
         frame.stack.push(new TupleType(values));
     }

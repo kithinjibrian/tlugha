@@ -1,8 +1,6 @@
-import lib;
-
-use lib::math::num::{ add };
+use std::fetch::{ get };
 use std::io::{ print };
 
-fun main(): unit {
-   print("{}", add());
+fun main(): number { 
+    get("https://jsonplaceholder.typicode.com/todos/1", {});
 }

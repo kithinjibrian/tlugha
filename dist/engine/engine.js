@@ -37,7 +37,7 @@ class Engine {
         return this;
     }
     before_accept(node, args) {
-        // console.log(node.type)
+        //console.log(node.type)
         this.plugins.forEach(plugin => { var _a; return (_a = plugin.beforeAccept) === null || _a === void 0 ? void 0 : _a.call(plugin, node, this, args); });
     }
     visit(node, args) {
@@ -112,12 +112,12 @@ class Engine {
     run(before_run) {
         return __awaiter(this, void 0, void 0, function* () {
             if (before_run) {
-                before_run.map((fn) => __awaiter(this, void 0, void 0, function* () {
-                    return yield fn({
+                for (const fn of before_run) {
+                    yield fn({
                         root: this.root,
                         current: this.current
                     });
-                }));
+                }
             }
             yield this.visit(this.ast, { frame: this.root.frame });
             return this;
@@ -141,9 +141,9 @@ class Engine {
     }
     visitSourceElements(node, args) {
         return __awaiter(this, void 0, void 0, function* () {
-            node.sources.forEach((src) => __awaiter(this, void 0, void 0, function* () {
+            for (const src of node.sources) {
                 yield this.visit(src, args);
-            }));
+            }
         });
     }
     visitExpressionStatement(node, args) {
@@ -157,9 +157,9 @@ class Engine {
             const new_module = new module_1.Module(node.identifier.name);
             this.current.add_submodule(new_module);
             this.current = new_module;
-            node.body.forEach((src) => __awaiter(this, void 0, void 0, function* () {
+            for (const src of node.body) {
                 yield this.visit(src, Object.assign(Object.assign({}, args), { frame: new_module.frame }));
-            }));
+            }
             this.current = cache;
         });
     }
@@ -432,28 +432,34 @@ class Engine {
     }
     visitSet(node_1, _a) {
         return __awaiter(this, arguments, void 0, function* (node, { frame }) {
-            const values = yield Promise.all(node.values.map((src) => __awaiter(this, void 0, void 0, function* () {
+            const values = [];
+            for (const src of node.values) {
                 yield this.visit(src, { frame });
-                return frame.stack.pop();
-            })));
+                const value = frame.stack.pop();
+                values.push(value);
+            }
             frame.stack.push(new set_1.SetType(values));
         });
     }
     visitArray(node_1, _a) {
         return __awaiter(this, arguments, void 0, function* (node, { frame }) {
-            const values = yield Promise.all(node.elements.map((src) => __awaiter(this, void 0, void 0, function* () {
+            const values = [];
+            for (const src of node.elements) {
                 yield this.visit(src, { frame });
-                return frame.stack.pop();
-            })));
+                const value = frame.stack.pop();
+                values.push(value);
+            }
             frame.stack.push(new array_1.ArrayType(values));
         });
     }
     visitTuple(node_1, _a) {
         return __awaiter(this, arguments, void 0, function* (node, { frame }) {
-            const values = yield Promise.all(node.values.map((src) => __awaiter(this, void 0, void 0, function* () {
+            const values = [];
+            for (const src of node.values) {
                 yield this.visit(src, { frame });
-                return frame.stack.pop();
-            })));
+                const value = frame.stack.pop();
+                values.push(value);
+            }
             frame.stack.push(new tuple_1.TupleType(values));
         });
     }

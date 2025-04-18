@@ -22,6 +22,13 @@ export const builtin: Record<string, Builtin> = {
         signature: "string",
         value: "Lugha v1.0.0"
     },
+    __now__: {
+        type: "function",
+        signature: "<T, U>(args: T) -> U",
+        exec: (args: any[]) => {
+            return new Date();
+        }
+    },
     __print__: {
         type: "function",
         signature: "<T, U>(args: T) -> U",

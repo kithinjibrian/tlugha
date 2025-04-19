@@ -1,3 +1,0 @@
-fun speed(): string {
-    return "speed";
-}

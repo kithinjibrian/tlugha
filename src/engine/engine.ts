@@ -7,6 +7,8 @@ import {
     BooleanNode,
     builtin,
     CallExpressionNode,
+    EnumNode,
+    EnumVariantNode,
     ExpressionStatementNode,
     FieldNode,
     FunctionDecNode,
@@ -29,6 +31,7 @@ import {
     StructInitNode,
     StructNode,
     TupleNode,
+    TupleVariantNode,
     UseNode,
     VariableNode,
     VariableStatementNode,
@@ -52,15 +55,18 @@ import { create_object } from "../objects/create";
 import { BoolType } from "../objects/bool";
 import { StructType } from "../objects/struct";
 import { MemberType } from "../objects/member";
+import { Cache } from "./cache";
 
 export class Engine implements ASTVisitor {
     private current: Module;
     private plugins: Extension<any>[] = [];
+    private enum: number = 0;
 
     constructor(
+        public rd: string,
+        public wd: string,
         public ast: ASTNode,
         public root: Module,
-        public wd: string,
         public lugha: Function
     ) {
         this.current = this.root;
@@ -247,22 +253,45 @@ export class Engine implements ASTVisitor {
 
         if (!existsSync(filePath)) {
             const subPath = path.join(originalWd, name, "__mod__.la");
+
             if (existsSync(subPath)) {
                 fileToImport = "__mod__.la";
                 importWd = path.join(originalWd, name);
             } else {
-                throw new Error(`Couldn't find module: '${name}'`);
+                const lib_path = path.join(`${this.rd}/lib`, name, "__mod__.la");
+
+                if (existsSync(lib_path)) {
+                    fileToImport = "__mod__.la";
+                    importWd = path.join(this.rd, "lib", name);
+                } else {
+                    throw new Error(`Couldn't find module: '${name}'`);
+                }
             }
         }
 
-        const module = new Module(node.identifier.name);
+        let cache = Cache.get_instance()
+        let module;
+
+        let mod_path = path.join(importWd, fileToImport);;
+
+        if (cache.has_mod(mod_path)) {
+            module = cache.get_mod(mod_path);
+        } else {
+            module = new Module(node.identifier.name);
+        }
+
         this.current.add_submodule(module);
 
-        await this.lugha({
-            file: fileToImport,
-            wd: importWd,
-            module
-        });
+        if (!cache.has_mod(mod_path)) {
+            cache.add_mod(mod_path, module);
+
+            await this.lugha({
+                file: fileToImport,
+                wd: importWd,
+                rd: this.rd,
+                module
+            });
+        }
     }
 
     async visitUse(node: UseNode, { frame }: { frame: Frame }) {
@@ -284,6 +313,17 @@ export class Engine implements ASTVisitor {
 
             node.list.items.forEach(item => {
                 const symbol = module.frame.get(item.name);
+
+                if (!symbol) {
+                    module.children.forEach(mod => {
+                        if (mod.name == item.name) {
+                            this.current.add_submodule(mod)
+                        }
+                    })
+
+                    return;
+                }
+
                 frame.define(item.alias ?? item.name, symbol);
             });
         } else {
@@ -291,8 +331,17 @@ export class Engine implements ASTVisitor {
             const module = resolveModule(path.slice(0, -1));
             if (!module) return;
 
-
             const symbol = module.frame.get(path[path.length - 1]);
+
+            if (!symbol) {
+                module.children.forEach(mod => {
+                    if (mod.name == path[path.length - 1]) {
+                        this.current.add_submodule(mod)
+                    }
+                })
+
+                return;
+            }
 
             frame.define(node.alias ?? path[path.length - 1], symbol);
         }
@@ -350,12 +399,17 @@ export class Engine implements ASTVisitor {
 
         if (node.callee instanceof ScopedIdentifierNode) {
             await this.visit(node.callee, { frame });
-            const fn: FunctionType = frame.stack.pop();
-            if (!fn) {
+            const nd = frame.stack.pop();
+
+            if (!nd) {
                 throw new Error(`Function ${node.callee.name[0]} is not defined`);
             }
 
-            await this.execute_function(fn.getValue(), evaluatedArgs, frame);
+            if (nd instanceof FunctionType) {
+                await this.execute_function(nd.getValue(), evaluatedArgs, frame);
+            } else if (nd instanceof TupleVariantNode) {
+                frame.stack.push(new TupleType(evaluatedArgs))
+            }
         } else {
             await this.visit(node.callee, { frame, args: evaluatedArgs });
             const fn = frame.stack.pop() as FunctionType;
@@ -612,9 +666,14 @@ export class Engine implements ASTVisitor {
             symbol instanceof ParameterNode
         ) {
             frame.stack.push(symbol.value);
-        } else if (symbol instanceof StructNode) {
+        } else if (
+            symbol instanceof StructNode ||
+            symbol instanceof TupleVariantNode
+        ) {
             frame.stack.push(symbol);
-        } else {
+        } else if (symbol instanceof Type) {
+            frame.stack.push(symbol);
+        } else if (symbol instanceof FunctionDecNode) {
             frame.stack.push(new FunctionType(symbol));
         }
     }
@@ -681,6 +740,36 @@ export class Engine implements ASTVisitor {
 
     async visitContinue(node: ASTNode, { frame }: { frame: Frame }) {
         frame.continue_flag = true;
+    }
+
+    async visitEnum(
+        node: EnumNode,
+        { frame }: { frame: Frame }
+    ) {
+        const newModule = new Module(node.name);
+        const newFrame = newModule.frame;
+        this.current.add_submodule(newModule);
+
+        this.enum = 0;
+
+        for (const src of node.body) {
+            await this.visit(src, { frame: newFrame });
+        }
+
+        this.enum = 0;
+    }
+
+    async visitEnumVariant(
+        node: EnumVariantNode,
+        { frame }: { frame: Frame }
+    ) {
+        let value = node.value ?? new NumberType(this.enum);
+
+        if (!node.value) {
+            this.enum++
+        }
+
+        frame.define(node.name, value);
     }
 
     async visitStruct(

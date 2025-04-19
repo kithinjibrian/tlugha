@@ -1,11 +1,10 @@
+import api;
+import mod;
+
 use std::io::{ print };
+use mod::physics::classic::{ speed };
 
-enum Weekday {
-    Monday,
-    Tuesday
-}
-
-fun main(): unit {
-    let name = "brian";
-    print("{}", name);
+fun main(): Array<string, string> {
+    print("{}", api::a);
+    print("{}", speed());
 }

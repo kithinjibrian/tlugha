@@ -17,9 +17,10 @@ export async function exec(filepath: string) {
 
     try {
         const engine = await lugha({
-            file: a.base,
-            wd: a.dir,
             module,
+            wd: a.dir,
+            rd: a.dir,
+            file: a.base,
             before_run: [
                 async ({ root }: { root: Module }) => {
                     Object.entries(builtin)
@@ -52,9 +53,10 @@ export async function exec(filepath: string) {
 
                     try {
                         await lugha({
+                            module,
+                            rd: __dirname,
                             file: "__mod__.la",
                             wd: path.join(__dirname, "../std"),
-                            module
                         })
                     } catch (error) {
                         throw error;

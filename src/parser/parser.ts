@@ -547,23 +547,16 @@ export class Parser {
 
     /**
      * 
-    type ::= primitive
-        | "Self"
-        | "Array" "<" type ">"
-        | "Set" "<" type ">"
-        | "Map" "<" type "," type ">"
+    type ::= Type
+        | Type < type ("," type)* >
         | "(" type ("," type)* ")"
      */
     public type(): ASTNode {
         let type: ASTNode | null = null;
 
-        if ((type = this.array_type())) {
+        if ((type = this.ft_type())) {
             return type;
-        } else if ((type = this.set_type())) {
-            return type;
-        } else if ((type = this.map_type())) {
-            return type;
-        } else if ((type = this.primitive())) {
+        } else if ((type = this.other_type())) {
             return type;
         }
 
@@ -573,85 +566,63 @@ export class Parser {
         };
     }
 
-    /**
-     * 
-     primitive ::= number
-        | string
-        | bool
-        | unit
-        | struct_types
-     */
-    private primitive(): ASTNode | null {
-        if (this.match(TokenType.Identifier)) {
-            return new TypeNode(this.previous().value);
+    private ft_type(): ASTNode | null {
+        if (!this.match(TokenType.LeftParen)) {
+            return null;
         }
 
-        return null;
+        let type = "tuple";
+        const types: ASTNode[] = [];
+
+        if (!this.check(TokenType.RightParen)) {
+            types.push(this.type());
+
+            while (this.match(TokenType.Comma)) {
+                if (this.check(TokenType.RightParen)) break; // trailing comma
+                types.push(this.type());
+            }
+        }
+
+        if (!this.match(TokenType.RightParen)) {
+            this.error("Expected ')'");
+        }
+
+        if (this.match(TokenType.Arrow)) {
+            type = "->";
+            types.push(this.type());
+        }
+
+        return new TypeNode(type, types);
     }
 
-    // "Array" "<" type ">"
-    private array_type(): ASTNode | null {
-        const value = this.peek().value;
-
-        if (value === "Array") {
-            this.advance();
-            if (!this.match(TokenType.LT)) {
-                this.error("Expected <");
-            }
-
-            const type = this.type();
-
-            if (!this.match(TokenType.GT)) {
-                this.error("Expected >");
-            }
-
-
-            return new TypeNode("Array", [type]);
+    // Type "<" type ">"
+    private other_type(): ASTNode | null {
+        if (!this.match(TokenType.Identifier)) {
+            this.error("Expected an identifier");
         }
-        return null;
-    }
 
-    // "Set" "<" type ">"
-    private set_type(): ASTNode | null {
-        const value = this.peek().value;
+        const value = this.previous().value;
 
-        if (value === "Set") {
-            this.advance();
-            if (!this.match(TokenType.LT)) {
-                this.error("Expected <");
-            }
-
-            const type = this.type();
-
-            if (!this.match(TokenType.GT)) {
-                this.error("Expected >");
-            }
-
-
-            return new TypeNode("Set", [type]);
+        if (!this.match(TokenType.LT)) {
+            return new TypeNode(value);
         }
-        return null;
-    }
 
-    // "Map" "<" type "," type ">"
-    private map_type(): ASTNode | null {
-        const value = this.peek().value;
-        if (value === "Map") {
-            this.advance();
-            if (!this.match(TokenType.LT)) {
-                this.error("Expected <");
+        const types: ASTNode[] = [];
+
+        if (!this.check(TokenType.GT)) {
+            types.push(this.type());
+
+            while (this.match(TokenType.Comma)) {
+                if (this.check(TokenType.GT)) break; // trailing comma
+                types.push(this.type());
             }
-            const keyType = this.type();
-            if (!this.match(TokenType.Comma)) {
-                this.error("Expected ,");
-            }
-            const valueType = this.type();
-            if (!this.match(TokenType.GT)) {
-                this.error("Expected >");
-            }
-            return new TypeNode("Map", [keyType, valueType]);
         }
-        return null;
+
+        if (!this.match(TokenType.GT)) {
+            this.error("Expected '>'");
+        }
+
+        return new TypeNode(value, types);
     }
 
     // expression_statement::= expression ";"
@@ -1277,7 +1248,7 @@ struct_method ::= "fun" identifier "(" parameter_list ")" (type_annotation)? fun
 
         if (this.match(TokenType.SemiColon)) { }
 
-        return new EnumNode(name, body, tp);
+        return new EnumNode(name, body, false, tp);
     }
 
     private enum_body(): EnumVariantNode[] {
@@ -1293,7 +1264,10 @@ struct_method ::= "fun" identifier "(" parameter_list ")" (type_annotation)? fun
             let value: EnumVariantValueNode | undefined = undefined;
 
             if (this.match(TokenType.LeftBrace)) {
-                value = new StructVariantNode(this.struct_body());
+                value = new StructNode(
+                    name,
+                    this.struct_body()
+                );
 
                 if (!this.match(TokenType.RightBrace)) {
                     this.error(`Expected '}' to close struct variant`);
@@ -1305,8 +1279,6 @@ struct_method ::= "fun" identifier "(" parameter_list ")" (type_annotation)? fun
                 if (!this.match(TokenType.RightParen)) {
                     this.error(`Expected ')' to close tuple variant`);
                 }
-            } else if (this.match(TokenType.Equals)) {
-                value = new ConstantVariantNode(this.constants());
             }
 
             variants.push(new EnumVariantNode(name, value));
@@ -1370,7 +1342,8 @@ struct_method ::= "fun" identifier "(" parameter_list ")" (type_annotation)? fun
 
             if (is_public) {
                 if (item instanceof StructNode ||
-                    item instanceof FunctionDecNode
+                    item instanceof FunctionDecNode ||
+                    item instanceof EnumNode
                 ) {
                     item.exported = true;
                 } else {

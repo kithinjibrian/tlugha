@@ -730,6 +730,7 @@ export class EnumNode extends ASTNodeBase {
     constructor(
         public name: string,
         public body: EnumVariantNode[],
+        public exported: boolean,
         public type_parameters?: TypeParameterNode[]
 
     ) {
@@ -741,7 +742,7 @@ export class EnumNode extends ASTNodeBase {
     }
 }
 
-export type EnumVariantValueNode = StructVariantNode | TupleVariantNode | ConstantVariantNode;
+export type EnumVariantValueNode = StructNode | TupleVariantNode | ConstantVariantNode;
 
 export class EnumVariantNode extends ASTNodeBase {
     type = "EnumVariant";

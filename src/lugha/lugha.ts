@@ -9,13 +9,15 @@ import * as path from 'path-browserify';
 import { readFileSync } from "fs"
 
 export async function lugha({
-    file,
+    rd,
     wd,
+    file,
     module,
     before_run
 }: {
-    file: string,
     wd: string,
+    rd: string,
+    file: string,
     module: Module,
     before_run?: Function[]
 }): Promise<Engine> {
@@ -30,14 +32,14 @@ export async function lugha({
         let ast = parser.parse();
 
         return new Engine(
+            rd,
+            wd,
             ast,
             module,
-            wd,
             lugha
         ).run(before_run);
 
     } catch (error: any) {
         throw error;
     }
-
 }   

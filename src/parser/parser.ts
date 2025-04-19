@@ -1,5 +1,6 @@
 import {
     ArrayNode,
+    AssignmentExpressionNode,
     ASTNode,
     BinaryOpNode,
     BlockNode,
@@ -29,6 +30,8 @@ import {
     SetNode,
     SourceElementsNode,
     StringNode,
+    StructInitNode,
+    StructFieldNode,
     StructNode,
     StructVariantNode,
     TupleNode,
@@ -42,6 +45,7 @@ import {
     VariableNode,
     VariableStatementNode,
     WhileNode,
+    MemberDecNode,
 } from "./ast";
 
 import { Token } from "../lexer/lexer";
@@ -90,7 +94,7 @@ export class Parser {
 
     private error(message: string): never {
         const token = this.peek();
-        throw new Error(`${message} at line ${token.line}, column ${token.column}`);
+        throw new Error(`<from parser>\n${message} at line ${token.line}, column ${token.column}`);
     }
 
     /**
@@ -170,10 +174,14 @@ export class Parser {
             this.error(`Function '${functionName.name}' requires a return type annotation`);
         }
 
+        let body = this.block();
+
+        body.name = `fn_body_${functionName.name}`
+
         return new FunctionDecNode(
             functionName,
             parameters,
-            this.block(),
+            body,
             false,
             false,
             false,
@@ -297,7 +305,7 @@ export class Parser {
 
         // Expect opening parenthesis
         if (!this.match(TokenType.LeftParen)) {
-            this.error("Expected '(' after function name");
+            this.error("Expected '(' before expression");
         }
 
         // Parse expression
@@ -305,11 +313,14 @@ export class Parser {
 
         // Expect closing parenthesis
         if (!this.match(TokenType.RightParen)) {
-            this.error("Expected ')' after parameters");
+            this.error("Expected ')' after expression");
         }
 
-
         const body = this.statement();
+
+        if (body instanceof BlockNode) {
+            body.name = "While"
+        }
 
         return new WhileNode(expression, body);
     }
@@ -323,7 +334,7 @@ export class Parser {
 
         // Expect opening brace
         if (!this.match(TokenType.LeftBrace)) {
-            this.error("Expected '{' before function body");
+            this.error("Expected '{' before body");
         }
 
         while (!this.check(TokenType.RightBrace) && !this.is_at_end()) {
@@ -332,7 +343,7 @@ export class Parser {
 
         // Expect closing brace
         if (!this.match(TokenType.RightBrace)) {
-            this.error("Expected '}' before function body");
+            this.error("Expected '}' before body");
         }
 
         return new BlockNode(body);
@@ -398,7 +409,7 @@ export class Parser {
 
         // Expect opening parenthesis
         if (!this.match(TokenType.LeftParen)) {
-            this.error("Expected '(' after function name");
+            this.error("Expected '(' before expression");
         }
 
         // Parse condition
@@ -406,7 +417,7 @@ export class Parser {
 
         // Expect closing parenthesis
         if (!this.match(TokenType.RightParen)) {
-            this.error("Expected ')' after parameters");
+            this.error("Expected ')' after expression");
         }
 
         const consequent = this.statement();
@@ -685,15 +696,7 @@ export class Parser {
                 this.error('Invalid assignment target');
             }
 
-            return {
-                type: 'AssignmentExpression',
-                left,
-                operator,
-                right,
-                accept(visitor, args) {
-                    visitor.visitAssignmentExpression?.(this as BinaryOpNode, args)
-                }
-            } as ASTNode;
+            return new AssignmentExpressionNode(operator, left, right);
 
         }
         return left;
@@ -716,6 +719,8 @@ export class Parser {
     private is_valid_assignment_target(node: ASTNode): boolean {
         switch (node.type) {
             case 'Identifier':
+                return true;
+            case 'ScopedIdentifier':
                 return true;
             case 'MemberExpression':
                 return true;
@@ -977,8 +982,8 @@ export class Parser {
             case TokenType.Identifier: {
                 const iden = this.scoped_identifier();
                 if (this.peek().type == TokenType.LeftBrace) {
-                    // const object = this.object();
-                    // return new StructDefNode(iden.name, object);
+                    const fields = this.struct_initializer();
+                    return new StructInitNode(iden, fields);
                 }
 
                 return iden;
@@ -1106,6 +1111,53 @@ export class Parser {
             ? new MapNode(properties) : new SetNode(elements);
     }
 
+    private struct_initializer() {
+        if (!this.match(TokenType.LeftBrace)) {
+            this.error("Expected a '{'");
+        }
+
+        const fields = this.struct_fields();
+
+        if (!this.match(TokenType.RightBrace)) {
+            this.error("Expected a '}'");
+        }
+
+        return fields;
+    }
+
+    private struct_fields(): StructFieldNode[] {
+        const fields: StructFieldNode[] = [];
+
+        if (this.check(TokenType.RightBrace)) {
+            return fields;
+        }
+
+        while (true) {
+            fields.push(this.struct_field());
+
+            if (this.match(TokenType.Comma)) {
+                if (this.check(TokenType.RightBrace)) {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+
+        return fields;
+    }
+
+    private struct_field() {
+        const iden = this.identifier();
+        let expr;
+
+        if (this.match(TokenType.Colon)) {
+            expr = this.assignment_expression()
+        }
+
+        return new StructFieldNode(iden, expr)
+    }
+
     /**
 struct_statement ::= export_modifier? "struct" identifier (type_parameters)? ("impl" trait_impl ("," trait_impl)*)? "{" (struct_body)? "}"
 trait_impl ::= identifier (type_arguments)?
@@ -1162,7 +1214,13 @@ struct_method ::= "fun" identifier "(" parameter_list ")" (type_annotation)? fun
         while (!this.check(TokenType.RightBrace)) {
 
             if (this.check(TokenType.Fun)) {
-                fields.push(this.function_declaration())
+                let fun = this.function_declaration();
+
+                if (fun.params?.parameters[0].identifier.name == "self") {
+                    fun = new MemberDecNode(fun)
+                }
+
+                fields.push(fun);
             } else {
                 fields.push(this.field());
             }

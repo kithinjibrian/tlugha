@@ -1,6 +1,7 @@
 import axios from "axios"
 import { Type } from "./objects/base"
 import { readFile, writeFile } from "fs/promises"
+import { StringType } from "./objects/string"
 
 export type Builtin =
     {
@@ -32,14 +33,15 @@ export const builtin: Record<string, Builtin> = {
     __print__: {
         type: "function",
         signature: "<T, U>(args: T) -> U",
+        filter: (args) => args.map(i => i),
         exec: (args: any[]) => {
-            let formatted = args[0];
+            let formatted = args[0].value;
             const values = args[1];
 
             let index = 0;
             formatted = formatted.replace(/\{\}/g, () => {
-                const val = index < values.length ? values[index++] : "{}";
-                return JSON.stringify(val, null, 2);
+                const val = index < values.value.length ? values.value[index++] : new StringType("{}");
+                return val.str();
             });
 
             console.log(formatted);

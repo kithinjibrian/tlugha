@@ -11,6 +11,7 @@ export interface ASTVisitor {
     visitWhile?(node: WhileNode, args?: Record<string, any>): any;
     visitFor?(node: ForNode, args?: Record<string, any>): any;
     visitFunctionDec?(node: FunctionDecNode, args?: Record<string, any>): any;
+    visitMemberDec?(node: MemberDecNode, args?: Record<string, any>): any;
     visitLambda?(node: LambdaNode, args?: Record<string, any>): any;
     visitContinuation?(node: ContinuationNode, args?: Record<string, any>): any;
     visitParametersList?(node: ParametersListNode, args?: Record<string, any>): any;
@@ -28,7 +29,8 @@ export interface ASTVisitor {
     visitMap?(node: MapNode, args?: Record<string, any>): any;
     visitSet?(node: SetNode, args?: Record<string, any>): any;
     visitTuple?(node: TupleNode, args?: Record<string, any>): any;
-    visitStructDef?(node: StructDefNode, args?: Record<string, any>): any;
+    visitStructInit?(node: StructInitNode, args?: Record<string, any>): any;
+    visitStructField?(node: StructFieldNode, args?: Record<string, any>): any;
     visitProperty?(node: PropertyNode, args?: Record<string, any>): any;
     visitBinaryOp?(node: BinaryOpNode, args?: Record<string, any>): any;
     visitTertiaryExpression?(node: TertiaryExpressionNode, args?: Record<string, any>): any;
@@ -107,7 +109,10 @@ export class SourceElementsNode extends ASTNodeBase {
 export class BlockNode extends ASTNodeBase {
     type = 'Block';
 
-    constructor(public body: ASTNode[]) {
+    constructor(
+        public body: ASTNode[],
+        public name: string = ""
+    ) {
         super();
     }
 
@@ -181,6 +186,29 @@ export class FunctionDecNode extends ASTNodeBase {
 
     _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
         return visitor.visitFunctionDec?.(this, args);
+    }
+}
+
+export class MemberDecNode extends FunctionDecNode {
+    type = 'MemberDec';
+
+    constructor(
+        fun: FunctionDecNode,
+    ) {
+        super(
+            fun.identifier,
+            fun.params,
+            fun.body,
+            fun.inbuilt,
+            fun.is_async,
+            fun.exported,
+            fun.type_parameters,
+            fun.return_type
+        );
+    }
+
+    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
+        return visitor.visitMemberDec?.(this, args);
     }
 }
 
@@ -395,19 +423,33 @@ export class TupleNode extends ASTNodeBase {
     }
 }
 
-export class StructDefNode extends ASTNodeBase {
-    type = 'StructDef';
+export class StructInitNode extends ASTNodeBase {
+    type = 'StructInit';
 
     constructor(
-        public name: string,
-        public object: MapNode,
-        public exported: boolean = false
+        public name: ASTNode,
+        public fields: StructFieldNode[],
     ) {
         super();
     }
 
     _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitStructDef?.(this, args);
+        return visitor.visitStructInit?.(this, args);
+    }
+}
+
+export class StructFieldNode extends ASTNodeBase {
+    type = 'StructField';
+
+    constructor(
+        public iden: IdentifierNode,
+        public expression?: ASTNode,
+    ) {
+        super();
+    }
+
+    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
+        return visitor.visitStructField?.(this, args);
     }
 }
 
@@ -420,6 +462,22 @@ export class PropertyNode extends ASTNodeBase {
 
     _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
         return visitor.visitProperty?.(this, args);
+    }
+}
+
+export class AssignmentExpressionNode extends ASTNodeBase {
+    type = 'AssignmentExpression';
+
+    constructor(
+        public operator: string,
+        public left: ASTNode,
+        public right: ASTNode
+    ) {
+        super();
+    }
+
+    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
+        return visitor.visitAssignmentExpression?.(this, args);
     }
 }
 

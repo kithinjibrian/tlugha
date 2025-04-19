@@ -1,6 +1,11 @@
-use std::fetch::{ get };
 use std::io::{ print };
 
-fun main(): number { 
-    get("https://jsonplaceholder.typicode.com/todos/1", {});
+enum Weekday {
+    Monday,
+    Tuesday
+}
+
+fun main(): unit {
+    let name = "brian";
+    print("{}", name);
 }

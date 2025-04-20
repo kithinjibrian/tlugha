@@ -58,8 +58,8 @@ export const builtin: Record<string, Builtin> = {
                 const res = await axios.get(args[0], args[1]);
                 const { config, request, ...rest } = res;
                 return rest;
-            } catch (e) {
-                console.log(e)
+            } catch (e: any) {
+                throw e.message;
             }
         }
     },
@@ -72,8 +72,8 @@ export const builtin: Record<string, Builtin> = {
                 const res = await axios.post(args[0], args[1], args[2]);
                 const { config, request, ...rest } = res;
                 return rest;
-            } catch (e) {
-                console.log(e)
+            } catch (e: any) {
+                throw e.message;
             }
         }
     },
@@ -85,8 +85,8 @@ export const builtin: Record<string, Builtin> = {
             try {
                 const res = await readFile(args[0], args[1]);
                 return res;
-            } catch (e) {
-                console.log(e)
+            } catch (e: any) {
+                throw e.message;
             }
         }
     },
@@ -97,8 +97,8 @@ export const builtin: Record<string, Builtin> = {
         exec: async (args: any[]) => {
             try {
                 await writeFile(args[0], args[1]);
-            } catch (e) {
-                console.log(e)
+            } catch (e: any) {
+                throw e.message;
             }
         }
     }

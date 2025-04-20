@@ -47,7 +47,7 @@ import { NumberType } from "../objects/number";
 import { SetType } from "../objects/set";
 import { StringType } from "../objects/string";
 import { TupleType } from "../objects/tuple";
-import { Extension } from "../plugin/plugin";
+import { Extension, ExtensionStore } from "../extension/extension";
 
 import { existsSync } from "fs";
 import * as path from 'path-browserify';
@@ -59,7 +59,7 @@ import { Cache } from "./cache";
 
 export class Engine implements ASTVisitor {
     private current: Module;
-    private plugins: Extension<any>[] = [];
+    private extension: ExtensionStore<unknown> = ExtensionStore.get_instance();
     private enum: number = 0;
 
     constructor(
@@ -72,27 +72,22 @@ export class Engine implements ASTVisitor {
         this.current = this.root;
     }
 
-    public plugin(p: Extension<any>) {
-        this.plugins.push(p);
-        return this;
-    }
-
     public before_accept(
         node: ASTNode,
         args?: Record<string, any>
     ) {
         //console.log(node.type)
-        this.plugins.forEach(plugin => plugin.beforeAccept?.(node, this, args));
+        this.extension.get_extensions().forEach(ext => ext.before_accept?.(node, this, args));
     }
 
     public async visit(node?: ASTNode, args?: Record<string, any>): Promise<void> {
         if (node == undefined) return;
 
-        const handledByPlugin = this.plugins.some(plugin =>
-            plugin.handleNode?.(node, this, args)
+        const handledByExtension = this.extension.get_extensions().some(ext =>
+            ext.handle_node?.(node, this, args)
         );
 
-        if (!handledByPlugin) {
+        if (!handledByExtension) {
             try {
                 await node.accept(this, args);
             } catch (error) {
@@ -105,7 +100,7 @@ export class Engine implements ASTVisitor {
         node: ASTNode,
         args?: Record<string, any>
     ) {
-        this.plugins.forEach(plugin => plugin.afterAccept?.(node, this, args));
+        this.extension.get_extensions().forEach(ext => ext.after_accept?.(node, this, args));
     }
 
     private async execute_function(
@@ -176,9 +171,9 @@ export class Engine implements ASTVisitor {
         }
     }
 
-    async run(before_run?: Function[]) {
-        if (before_run) {
-            for (const fn of before_run) {
+    async run() {
+        for (const ext of this.extension.get_extensions()) {
+            for (const fn of ext.before_run()) {
                 await fn({
                     root: this.root,
                     current: this.current
@@ -186,7 +181,8 @@ export class Engine implements ASTVisitor {
             }
         }
 
-        await this.visit(this.ast, { frame: this.root.frame })
+        await this.visit(this.ast, { frame: this.root.frame });
+
         return this;
     }
 
@@ -272,7 +268,7 @@ export class Engine implements ASTVisitor {
         let cache = Cache.get_instance()
         let module;
 
-        let mod_path = path.join(importWd, fileToImport);;
+        let mod_path = path.join(importWd, fileToImport);
 
         if (cache.has_mod(mod_path)) {
             module = cache.get_mod(mod_path);

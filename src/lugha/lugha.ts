@@ -12,14 +12,12 @@ export async function lugha({
     rd,
     wd,
     file,
-    module,
-    before_run
+    module
 }: {
     wd: string,
     rd: string,
     file: string,
-    module: Module,
-    before_run?: Function[]
+    module: Module
 }): Promise<Engine> {
     const file_path = path.join(wd, file);
     const code = readFileSync(file_path, 'utf-8')
@@ -31,14 +29,15 @@ export async function lugha({
         let parser = new Parser(tokens);
         let ast = parser.parse();
 
-        return new Engine(
+        const engine = new Engine(
             rd,
             wd,
             ast,
             module,
             lugha
-        ).run(before_run);
+        );
 
+        return engine.run();
     } catch (error: any) {
         throw error;
     }

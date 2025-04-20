@@ -190,6 +190,34 @@ range_expression ::= expression ".." expression
 lambda_expression ::= "fun" "(" parameter_list ")" (type_annotation)? "->" expression
     | "fun" "(" parameter_list ")" (type_annotation)? "->" function_body
 
-match_expression ::= "match" expression "{" match_arm_list "}"
-match_arm_list ::= match_arm ("," match_arm)* ","?
-match_arm ::= pattern "=>" expression
+<match_expr>      ::= "match" <expression> "{" <match_arm>+ "}"
+
+<match_arm>       ::= <pattern> [ "if" <guard_expr> ] "=>" <expression_or_block> [ "," ]
+
+<pattern>         ::= <literal_pattern>
+                    | <identifier_pattern>
+                    | <wildcard_pattern>
+                    | <tuple_pattern>
+                    | <struct_pattern>
+                    | <enum_pattern>
+                    | <range_pattern>
+                    | <or_pattern>
+                    | "_"
+
+<or_pattern>      ::= <pattern> "|" <pattern> { "|" <pattern> }
+
+<guard_expr>      ::= ... (boolean expression)
+<expression_or_block> ::= <expression> | <block>
+
+<literal_pattern> ::= <number> | <string> | <char> | <boolean>
+<identifier_pattern> ::= <identifier> [ "@" <subpattern> ]
+<wildcard_pattern>   ::= "_"
+<tuple_pattern>      ::= "(" <pattern_list> ")"
+<struct_pattern>     ::= <path> "{" <field_pattern_list> "}"
+<enum_pattern>       ::= <path> "(" <pattern_list> ")"
+<range_pattern>      ::= <literal> ".." <literal> | <literal> "..=" <literal>
+
+<pattern_list>       ::= <pattern> { "," <pattern> }
+<field_pattern_list> ::= <field_pattern> { "," <field_pattern> }
+
+<field_pattern>      ::= <identifier> [ ":" <pattern> ]

@@ -1,10 +1,7 @@
 import api;
-import mod;
 
 use std::io::{ print };
-use mod::physics::classic::{ speed };
 
-fun main(): Array<string, string> {
+fun main(): unit {
     print("{}", api::a);
-    print("{}", speed());
 }

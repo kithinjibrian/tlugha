@@ -37,7 +37,6 @@ export interface ASTVisitor {
     visitIfElse?(node: IfElseNode, args?: Record<string, any>): any;
     visitUnaryOp?(node: UnaryOpNode, args?: Record<string, any>): any;
     visitMemberExpression?(node: MemberExpressionNode, args?: Record<string, any>): any;
-    visitAwaitExpression?(node: AwaitExpressionNode, args?: Record<string, any>): any;
     visitCallExpression?(node: CallExpressionNode, args?: Record<string, any>): any;
     visitArrowExpression?(node: ArrowExpressionNode, args?: Record<string, any>): any;
     visitPostfixExpression?(node: PostfixExpressionNode, args?: Record<string, any>): any;
@@ -71,15 +70,15 @@ export interface ASTNode {
 export abstract class ASTNodeBase implements ASTNode {
     abstract type: string;
 
-    accept(visitor: ASTVisitor, args?: Record<string, any>) {
-        visitor.before_accept?.(this, args);
-        const res = this._accept(visitor, args);
-        visitor.after_accept?.(this, args);
+    async accept(visitor: ASTVisitor, args?: Record<string, any>) {
+        await visitor.before_accept?.(this, args);
+        const res = await this._accept(visitor, args);
+        await visitor.after_accept?.(this, args);
 
         return res;
     }
 
-    abstract _accept(visitor: ASTVisitor, args?: Record<string, any>): void;
+    abstract _accept(visitor: ASTVisitor, args?: Record<string, any>): any;
 }
 
 export class ProgramNode extends ASTNodeBase {
@@ -89,8 +88,8 @@ export class ProgramNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitProgram?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitProgram?.(this, args);
     }
 }
 
@@ -101,8 +100,8 @@ export class SourceElementsNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitSourceElements?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitSourceElements?.(this, args);
     }
 }
 
@@ -116,8 +115,8 @@ export class BlockNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitBlock?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitBlock?.(this, args);
     }
 }
 
@@ -128,8 +127,8 @@ export class WhileNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitWhile?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitWhile?.(this, args);
     }
 }
 
@@ -145,8 +144,8 @@ export class ForNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitFor?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitFor?.(this, args);
     }
 }
 
@@ -160,11 +159,8 @@ export class ContinuationNode extends ASTNodeBase {
         super();
     }
 
-    _accept(
-        visitor: ASTVisitor,
-        args?: Record<string, any>
-    ): void {
-        return visitor.visitContinuation?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitContinuation?.(this, args);
     }
 }
 
@@ -176,7 +172,7 @@ export class FunctionDecNode extends ASTNodeBase {
         public params: ParametersListNode | undefined,
         public body: BlockNode,
         public inbuilt: boolean = false,
-        public is_async: boolean = false,
+        public is_: boolean = false,
         public exported: boolean = false,
         public type_parameters?: TypeParameterNode[],
         public return_type?: ASTNode
@@ -184,8 +180,8 @@ export class FunctionDecNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitFunctionDec?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitFunctionDec?.(this, args);
     }
 }
 
@@ -200,15 +196,15 @@ export class MemberDecNode extends FunctionDecNode {
             fun.params,
             fun.body,
             fun.inbuilt,
-            fun.is_async,
+            fun.is_,
             fun.exported,
             fun.type_parameters,
             fun.return_type
         );
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitMemberDec?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitMemberDec?.(this, args);
     }
 }
 
@@ -218,15 +214,15 @@ export class LambdaNode extends ASTNodeBase {
     constructor(
         public params: ParametersListNode | undefined,
         public body: ASTNode,
-        public is_async: boolean = false,
+        public is_: boolean = false,
         public type_parameters?: TypeParameterNode[],
         public return_type?: ASTNode
     ) {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitLambda?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitLambda?.(this, args);
     }
 }
 
@@ -237,8 +233,8 @@ export class ParametersListNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitParametersList?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitParametersList?.(this, args);
     }
 }
 
@@ -255,20 +251,20 @@ export class ParameterNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitParameter?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitParameter?.(this, args);
     }
 }
 
 export class ReturnNode extends ASTNodeBase {
-    type = 'Return';
+    type = 'return await ';
 
     constructor(public expression?: ASTNode) {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitReturn?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitReturn?.(this, args);
     }
 }
 
@@ -279,8 +275,8 @@ export class VariableStatementNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitVariableList?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitVariableList?.(this, args);
     }
 }
 
@@ -298,8 +294,8 @@ export class VariableNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitVariable?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitVariable?.(this, args);
     }
 }
 
@@ -310,8 +306,8 @@ export class ExpressionStatementNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitExpressionStatement?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitExpressionStatement?.(this, args);
     }
 }
 
@@ -322,8 +318,8 @@ export class ExpressionNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitExpression?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitExpression?.(this, args);
     }
 }
 
@@ -334,8 +330,8 @@ export class NumberNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitNumber?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitNumber?.(this, args);
     }
 }
 
@@ -346,8 +342,8 @@ export class BooleanNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitBoolean?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitBoolean?.(this, args);
     }
 }
 
@@ -358,8 +354,8 @@ export class StringNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitString?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitString?.(this, args);
     }
 }
 
@@ -370,8 +366,8 @@ export class NullNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitNull?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitNull?.(this, args);
     }
 }
 
@@ -382,8 +378,8 @@ export class ArrayNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitArray?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitArray?.(this, args);
     }
 }
 
@@ -394,8 +390,8 @@ export class MapNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitMap?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitMap?.(this, args);
     }
 }
 
@@ -406,8 +402,8 @@ export class SetNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitSet?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitSet?.(this, args);
     }
 }
 
@@ -418,8 +414,8 @@ export class TupleNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitTuple?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitTuple?.(this, args);
     }
 }
 
@@ -433,8 +429,8 @@ export class StructInitNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitStructInit?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitStructInit?.(this, args);
     }
 }
 
@@ -448,8 +444,8 @@ export class StructFieldNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitStructField?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitStructField?.(this, args);
     }
 }
 
@@ -460,8 +456,8 @@ export class PropertyNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitProperty?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitProperty?.(this, args);
     }
 }
 
@@ -476,8 +472,8 @@ export class AssignmentExpressionNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitAssignmentExpression?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitAssignmentExpression?.(this, args);
     }
 }
 
@@ -492,8 +488,8 @@ export class BinaryOpNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitBinaryOp?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitBinaryOp?.(this, args);
     }
 }
 
@@ -508,8 +504,8 @@ export class TertiaryExpressionNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitTertiaryExpression?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitTertiaryExpression?.(this, args);
     }
 }
 
@@ -524,8 +520,8 @@ export class IfElseNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitIfElse?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitIfElse?.(this, args);
     }
 }
 
@@ -536,8 +532,8 @@ export class UnaryOpNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitUnaryOp?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitUnaryOp?.(this, args);
     }
 }
 
@@ -552,22 +548,8 @@ export class MemberExpressionNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitMemberExpression?.(this, args);
-    }
-}
-
-export class AwaitExpressionNode extends ASTNodeBase {
-    type = 'AwaitExpression';
-
-    constructor(
-        public expression: ASTNode,
-    ) {
-        super();
-    }
-
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitAwaitExpression?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitMemberExpression?.(this, args);
     }
 }
 
@@ -578,8 +560,8 @@ export class CallExpressionNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitCallExpression?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitCallExpression?.(this, args);
     }
 }
 
@@ -590,8 +572,8 @@ export class ArrowExpressionNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitArrowExpression?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitArrowExpression?.(this, args);
     }
 }
 
@@ -602,8 +584,8 @@ export class PostfixExpressionNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitPostfixExpression?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitPostfixExpression?.(this, args);
     }
 }
 
@@ -614,8 +596,8 @@ export class IdentifierNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitIdentifier?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitIdentifier?.(this, args);
     }
 }
 
@@ -628,8 +610,8 @@ export class ScopedIdentifierNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitScopedIdentifier?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitScopedIdentifier?.(this, args);
     }
 }
 
@@ -643,8 +625,8 @@ export class TypeParameterNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitTypeParameter?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitTypeParameter?.(this, args);
     }
 }
 
@@ -658,8 +640,8 @@ export class TypeNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitType?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitType?.(this, args);
     }
 }
 
@@ -673,8 +655,8 @@ export class GenericTypeNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitGenericType?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitGenericType?.(this, args);
     }
 }
 
@@ -685,8 +667,8 @@ export class AssignmentNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitAssignment?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitAssignment?.(this, args);
     }
 }
 
@@ -703,8 +685,8 @@ export class StructNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitStruct?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitStruct?.(this, args);
     }
 }
 
@@ -719,8 +701,8 @@ export class FieldNode extends ASTNodeBase {
         super()
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitField?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitField?.(this, args);
     }
 }
 
@@ -737,8 +719,8 @@ export class EnumNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitEnum?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitEnum?.(this, args);
     }
 }
 
@@ -755,8 +737,8 @@ export class EnumVariantNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitEnumVariant?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitEnumVariant?.(this, args);
     }
 }
 
@@ -767,8 +749,8 @@ export class StructVariantNode extends ASTNodeBase {
         super()
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitStructVariant?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitStructVariant?.(this, args);
     }
 }
 
@@ -779,8 +761,8 @@ export class TupleVariantNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitTupleVariant?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitTupleVariant?.(this, args);
     }
 }
 
@@ -791,8 +773,8 @@ export class ConstantVariantNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitConstantVariant?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitConstantVariant?.(this, args);
     }
 }
 
@@ -806,8 +788,8 @@ export class ModuleNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitModule?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitModule?.(this, args);
     }
 }
 
@@ -820,8 +802,8 @@ export class ImportNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitImport?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitImport?.(this, args);
     }
 }
 
@@ -836,8 +818,8 @@ export class UseNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitUse?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitUse?.(this, args);
     }
 }
 
@@ -850,8 +832,8 @@ export class UsePathNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitUsePath?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitUsePath?.(this, args);
     }
 }
 
@@ -864,8 +846,8 @@ export class UseListNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitUseList?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitUseList?.(this, args);
     }
 }
 
@@ -879,7 +861,7 @@ export class UseItemNode extends ASTNodeBase {
         super();
     }
 
-    _accept(visitor: ASTVisitor, args?: Record<string, any>): void {
-        return visitor.visitUseItem?.(this, args);
+    async _accept(visitor: ASTVisitor, args?: Record<string, any>): Promise<any> {
+        return await visitor.visitUseItem?.(this, args);
     }
 }

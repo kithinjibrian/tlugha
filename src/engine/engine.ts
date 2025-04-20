@@ -76,7 +76,6 @@ export class Engine implements ASTVisitor {
         node: ASTNode,
         args?: Record<string, any>
     ) {
-        //console.log(node.type)
         for (const ext of this.extension.get_extensions()) {
             await ext.before_accept?.(node, this, args)
         }
@@ -85,9 +84,17 @@ export class Engine implements ASTVisitor {
     public async visit(node?: ASTNode, args?: Record<string, any>): Promise<void> {
         if (node == undefined) return;
 
-        const handledByExtension = this.extension.get_extensions().some(ext =>
-            ext.handle_node?.(node, this, args)
-        );
+        let handledByExtension = false;
+
+        for (const ext of this.extension.get_extensions()) {
+            if (ext.handle_node) {
+                const result = await ext.handle_node(node, this, args);
+                if (result === true) {
+                    handledByExtension = true;
+                    break;
+                }
+            }
+        }
 
         if (!handledByExtension) {
             try {

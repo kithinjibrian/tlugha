@@ -379,7 +379,7 @@ export class Parser {
         return {
             type: "Break",
             accept(visitor) {
-                visitor.visitBreak?.(this);
+                return visitor.visitBreak?.(this);
             }
         }
     }
@@ -396,7 +396,7 @@ export class Parser {
         return {
             type: "Continue",
             accept(visitor) {
-                visitor.visitContinue?.(this);
+                return visitor.visitContinue?.(this);
             }
         }
     }
@@ -718,7 +718,7 @@ export class Parser {
                 consequent,
                 alternate,
                 accept(visitor) {
-                    visitor.visitTertiaryExpression?.(this)
+                    return visitor.visitTertiaryExpression?.(this)
                 }
             } as ASTNode;
         }

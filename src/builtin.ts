@@ -59,7 +59,7 @@ export const builtin: Record<string, Builtin> = {
                 const { config, request, ...rest } = res;
                 return rest;
             } catch (e: any) {
-                throw e.message;
+                throw e;
             }
         }
     },
@@ -73,7 +73,7 @@ export const builtin: Record<string, Builtin> = {
                 const { config, request, ...rest } = res;
                 return rest;
             } catch (e: any) {
-                throw e.message;
+                throw e;
             }
         }
     },
@@ -86,7 +86,7 @@ export const builtin: Record<string, Builtin> = {
                 const res = await readFile(args[0], args[1]);
                 return res;
             } catch (e: any) {
-                throw e.message;
+                throw e;
             }
         }
     },
@@ -98,7 +98,7 @@ export const builtin: Record<string, Builtin> = {
             try {
                 await writeFile(args[0], args[1]);
             } catch (e: any) {
-                throw e.message;
+                throw e;
             }
         }
     }

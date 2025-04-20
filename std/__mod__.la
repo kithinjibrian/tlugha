@@ -2,5 +2,6 @@ import io;
 import math;
 import time;
 import fetch;
+import shell;
 import option;
 import result;

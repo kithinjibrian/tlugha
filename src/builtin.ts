@@ -2,6 +2,7 @@ import axios from "axios"
 import { Type } from "./objects/base"
 import { readFile, writeFile } from "fs/promises"
 import { StringType } from "./objects/string"
+import { spawn } from "child_process"
 
 export type Builtin =
     {
@@ -100,6 +101,35 @@ export const builtin: Record<string, Builtin> = {
             } catch (e: any) {
                 throw e;
             }
+        }
+    },
+    __shell__: {
+        type: "function",
+        async: true,
+        signature: "<T, U>(args: T) -> U",
+        exec: async (args: any[]) => {
+            return new Promise((resolve, reject) => {
+                const process = spawn(args[0], { shell: true });
+
+                let output = '';
+                let error = '';
+
+                process.stdout.on('data', (data) => {
+                    output += data.toString();
+                });
+
+                process.stderr.on('data', (data) => {
+                    error += data.toString();
+                });
+
+                process.on('close', (code) => {
+                    if (code === 0) {
+                        resolve(output.trim());
+                    } else {
+                        reject(new Error(error || `Process exited with code ${code}`));
+                    }
+                });
+            });
         }
     }
 }

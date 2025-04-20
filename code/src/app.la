@@ -1,7 +1,9 @@
 import api;
 
 use std::io::{ print };
+use std::shell::{ run };
 
 fun main(): unit {
-    print("{}", api::a);
+    let res = run("ls -la");
+    print("{}", res);
 }

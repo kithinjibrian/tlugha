@@ -24,7 +24,7 @@ async function main() {
         reg.register(new Save())
 
         await exec({
-            filepath: "code/app.la"
+            filepath: "code/src/app.la"
         });
 
         //console.log(result)

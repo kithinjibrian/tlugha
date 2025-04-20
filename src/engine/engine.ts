@@ -236,50 +236,64 @@ export class Engine implements ASTVisitor {
         this.current = cache;
     }
 
-    async visitImport(
-        node: ImportNode,
-        args?: Record<string, any>
-    ) {
+    find_mod_in_lib_hierarchy(startDir: string, moduleName: string): string | null {
+        let currentDir = path.resolve(startDir);
+
+        while (true) {
+            const libPath = path.join(currentDir, "lib", moduleName, "__mod__.la");
+
+            if (existsSync(libPath)) {
+                return libPath;
+            }
+
+            const parentDir = path.dirname(currentDir);
+            if (parentDir === currentDir) break; // Reached root
+            currentDir = parentDir;
+        }
+
+        return null;
+    }
+
+    async visitImport(node: ImportNode, args?: Record<string, any>) {
         const originalWd = this.wd;
         const name = node.identifier.name;
 
-        const filePath = path.join(originalWd, `${name}.la`);
         let fileToImport = `${name}.la`;
         let importWd = originalWd;
 
-        if (!existsSync(filePath)) {
-            const subPath = path.join(originalWd, name, "__mod__.la");
+        const localPath = path.join(originalWd, fileToImport);
+        const localModPath = path.join(originalWd, name, "__mod__.la");
 
-            if (existsSync(subPath)) {
+        let modPath: string | null = null;
+
+        if (existsSync(localPath)) {
+            modPath = localPath;
+        } else if (existsSync(localModPath)) {
+            fileToImport = "__mod__.la";
+            importWd = path.join(originalWd, name);
+            modPath = path.join(importWd, fileToImport);
+        } else {
+            // Try recursive lib lookup
+            const foundLibPath = this.find_mod_in_lib_hierarchy(this.rd, name);
+
+            if (foundLibPath) {
                 fileToImport = "__mod__.la";
-                importWd = path.join(originalWd, name);
+                importWd = path.dirname(foundLibPath);
+                modPath = foundLibPath;
             } else {
-                const lib_path = path.join(`${this.rd}/lib`, name, "__mod__.la");
-
-                if (existsSync(lib_path)) {
-                    fileToImport = "__mod__.la";
-                    importWd = path.join(this.rd, "lib", name);
-                } else {
-                    throw new Error(`Couldn't find module: '${name}'`);
-                }
+                throw new Error(`Couldn't find module: '${name}'`);
             }
         }
 
-        let cache = Cache.get_instance()
-        let module;
-
-        let mod_path = path.join(importWd, fileToImport);
-
-        if (cache.has_mod(mod_path)) {
-            module = cache.get_mod(mod_path);
-        } else {
-            module = new Module(node.identifier.name);
-        }
+        const cache = Cache.get_instance();
+        let module = cache.has_mod(modPath)
+            ? cache.get_mod(modPath)
+            : new Module(name);
 
         this.current.add_submodule(module);
 
-        if (!cache.has_mod(mod_path)) {
-            cache.add_mod(mod_path, module);
+        if (!cache.has_mod(modPath)) {
+            cache.add_mod(modPath, module);
 
             await this.lugha({
                 file: fileToImport,

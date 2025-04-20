@@ -204,14 +204,19 @@ export class Engine implements ASTVisitor {
             await this.execute_function(main, [], this.root.frame);
             let ret = this.root.frame.stack.pop();
 
+            let after = [];
+
             for (const ext of this.extension.get_extensions()) {
-                await ext?.after_main({
+                let val = await ext?.after_main({
                     root: this.root
                 })
+
+                if (val) after.push(val);
             }
 
-            if (ret) {
-                return ret.getValue();
+            if (ret || after.length > 0) {
+                const value = ret?.getValue();
+                return after.length > 0 ? [value, ...after] : value;
             }
 
             return null;

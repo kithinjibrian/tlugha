@@ -188,13 +188,19 @@ export class Engine implements ASTVisitor {
 
     async call_main() {
         let main = this.root.frame.get("main");
-        await this.execute_function(main, [], this.root.frame);
-        let ret = this.root.frame.stack.pop();
 
-        if (ret) {
-            return ret.getValue();
+        if (main) {
+            await this.execute_function(main, [], this.root.frame);
+            let ret = this.root.frame.stack.pop();
+
+            if (ret) {
+                return ret.getValue();
+            }
+
+            return null;
         }
-        return null;
+
+        throw new Error("Main function not found!");
     }
 
     async visitProgram(node: ProgramNode, args?: Record<string, any>) {

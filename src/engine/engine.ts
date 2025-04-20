@@ -72,12 +72,14 @@ export class Engine implements ASTVisitor {
         this.current = this.root;
     }
 
-    public before_accept(
+    public async before_accept(
         node: ASTNode,
         args?: Record<string, any>
     ) {
         //console.log(node.type)
-        this.extension.get_extensions().forEach(ext => ext.before_accept?.(node, this, args));
+        for (const ext of this.extension.get_extensions()) {
+            await ext.before_accept?.(node, this, args)
+        }
     }
 
     public async visit(node?: ASTNode, args?: Record<string, any>): Promise<void> {
@@ -96,11 +98,13 @@ export class Engine implements ASTVisitor {
         }
     }
 
-    public after_accept(
+    public async after_accept(
         node: ASTNode,
         args?: Record<string, any>
     ) {
-        this.extension.get_extensions().forEach(ext => ext.after_accept?.(node, this, args));
+        for (const ext of this.extension.get_extensions()) {
+            await ext.after_accept?.(node, this, args)
+        }
     }
 
     private async execute_function(
@@ -173,7 +177,7 @@ export class Engine implements ASTVisitor {
 
     async run() {
         for (const ext of this.extension.get_extensions()) {
-            for (const fn of ext.before_run()) {
+            for (const fn of ext.before_run?.()) {
                 await fn({
                     root: this.root,
                     current: this.current
@@ -192,6 +196,12 @@ export class Engine implements ASTVisitor {
         if (main) {
             await this.execute_function(main, [], this.root.frame);
             let ret = this.root.frame.stack.pop();
+
+            for (const ext of this.extension.get_extensions()) {
+                await ext?.after_main({
+                    root: this.root
+                })
+            }
 
             if (ret) {
                 return ret.getValue();

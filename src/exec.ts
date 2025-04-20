@@ -18,11 +18,13 @@ import * as path from 'path-browserify';
 class UploadBuiltins extends Extension<ASTVisitor> {
     public name = "UploadBuiltins";
 
-    before_accept() { }
+    async before_accept() { }
 
-    after_accept() { }
+    async after_accept() { }
 
-    handle_node() { }
+    async handle_node() { }
+
+    async after_main() { }
 
     before_run() {
         return [

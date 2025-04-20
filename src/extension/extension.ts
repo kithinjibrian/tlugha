@@ -2,10 +2,11 @@ import { ASTNode, Module } from "../types";
 
 export abstract class Extension<TVisitor> {
     abstract name: string;
-    abstract before_accept(node: ASTNode, visitor: TVisitor, args?: Record<string, any>): void;
-    abstract after_accept(node: ASTNode, visitor: TVisitor, args?: Record<string, any>): void;
-    abstract handle_node(node: ASTNode, visitor: TVisitor, args?: Record<string, any>): boolean | void;
-    abstract before_run(): (({ root, current }: { root: Module, current: Module }) => void)[];
+    abstract before_accept(node: ASTNode, visitor: TVisitor, args?: Record<string, any>): Promise<void>;
+    abstract after_accept(node: ASTNode, visitor: TVisitor, args?: Record<string, any>): Promise<void>;
+    abstract handle_node(node: ASTNode, visitor: TVisitor, args?: Record<string, any>): Promise<boolean | void>;
+    abstract before_run(): (({ root, current }: { root: Module, current: Module }) => Promise<void>)[];
+    abstract after_main({ root }: { root: Module }): Promise<void>;
 }
 
 export class ExtensionStore<TVisitor> {

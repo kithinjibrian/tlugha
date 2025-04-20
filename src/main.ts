@@ -1,27 +1,11 @@
-import { ASTNode, ASTVisitor, exec, Extension, ExtensionStore } from "./types";
+import { exec, ExtensionStore } from "./types";
 
 export * from "./types";
-
-class Save extends Extension<ASTVisitor> {
-    public name = "save";
-
-    before_accept(node: ASTNode) { }
-
-    after_accept(node: ASTNode) { }
-
-    handle_node(node: ASTNode) { }
-
-    before_run() {
-        return []
-    }
-}
 
 async function main() {
     try {
 
         const reg = ExtensionStore.get_instance();
-
-        reg.register(new Save())
 
         await exec({
             filepath: "code/src/app.la"

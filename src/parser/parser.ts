@@ -94,7 +94,13 @@ export class Parser {
 
     private error(message: string): never {
         const token = this.peek();
-        throw new Error(`<from parser>\n${message} at line ${token.line}, column ${token.column}`);
+        throw new Error(`
+
+${token.line_str}
+${Array(token.column - 1).fill("~").join("")}^
+
+${message} at line ${token.line}, column ${token.column}
+        `);
     }
 
     /**

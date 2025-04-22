@@ -5,6 +5,7 @@ export interface Token {
     value: string;
     line: number;
     column: number;
+    line_str: string;
 }
 
 function one_char(c: string) {
@@ -201,9 +202,11 @@ export class Lexer {
     private position: number = 0;
     private line: number = 1;
     private column: number = 1;
+    private lines: string[] = [];
 
     constructor(input: string) {
         this.input = input;
+        this.lines = input.split('\n');
     }
 
     private peek(offset: number = 0): string {
@@ -220,6 +223,10 @@ export class Lexer {
             this.column++;
         }
         return char;
+    }
+
+    private getCurrentLine(): string {
+        return this.lines[this.line - 1] || '';
     }
 
     private skipWhitespace(): void {
@@ -252,6 +259,7 @@ export class Lexer {
 
     private readNumber(): Token {
         const startColumn = this.column;
+        const currentLineStr = this.getCurrentLine();
         let value = '';
 
         while (/\d/.test(this.peek())) {
@@ -265,11 +273,12 @@ export class Lexer {
             }
         }
 
-        return { type: TokenType.Number, value, line: this.line, column: startColumn };
+        return { type: TokenType.Number, value, line: this.line, column: startColumn, line_str: currentLineStr };
     }
 
     private readIdentifier(): Token {
         const startColumn = this.column;
+        const currentLineStr = this.getCurrentLine();
         let value = '';
 
         while (/[a-zA-Z0-9_]/.test(this.peek())) {
@@ -311,13 +320,15 @@ export class Lexer {
             type: keywords.get(value) || TokenType.Identifier,
             value,
             line: this.line,
-            column: startColumn
+            column: startColumn,
+            line_str: currentLineStr
         };
     }
 
     private readString(): Token {
         const startColumn = this.column;
         const quote = this.peek();
+        const currentLineStr = this.getCurrentLine();
         let value = '';
 
         this.advance(); // Skip opening quote
@@ -340,11 +351,18 @@ export class Lexer {
         }
 
         this.advance(); // Skip closing quote
-        return { type: TokenType.String, value, line: this.line, column: startColumn };
+        return {
+            type: TokenType.String,
+            value, line: this.line,
+            column: startColumn,
+            line_str: currentLineStr
+        };
     }
 
     private readOperator(): Token {
         const startColumn = this.column;
+        const currentLineStr = this.getCurrentLine();
+
         const c1 = this.peek();
         const c2 = this.peek(1);
         const c3 = this.peek(2);
@@ -355,7 +373,7 @@ export class Lexer {
             this.advance(); // First char
             this.advance(); // Second char
             this.advance(); // Third char
-            return { type: threeCharOp, value: c1 + c2 + c3, line: this.line, column: startColumn };
+            return { type: threeCharOp, value: c1 + c2 + c3, line: this.line, column: startColumn, line_str: currentLineStr };
         }
 
         // Try two-character operators
@@ -363,14 +381,14 @@ export class Lexer {
         if (twoCharOp !== TokenType.OP) {
             this.advance(); // First char
             this.advance(); // Second char
-            return { type: twoCharOp, value: c1 + c2, line: this.line, column: startColumn };
+            return { type: twoCharOp, value: c1 + c2, line: this.line, column: startColumn, line_str: currentLineStr };
         }
 
         // Single-character operators
         const oneCharOp = one_char(c1);
         if (oneCharOp !== TokenType.OP) {
             this.advance();
-            return { type: oneCharOp, value: c1, line: this.line, column: startColumn };
+            return { type: oneCharOp, value: c1, line: this.line, column: startColumn, line_str: currentLineStr };
         }
 
         throw new Error(`Invalid operator at line ${this.line}, column ${this.column}`);
@@ -381,7 +399,7 @@ export class Lexer {
         this.skipComment();
 
         if (this.position >= this.input.length) {
-            return { type: TokenType.EOF, value: '', line: this.line, column: this.column };
+            return { type: TokenType.EOF, value: '', line: this.line, column: this.column, line_str: "" };
         }
 
         const char = this.peek();

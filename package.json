@@ -1,6 +1,6 @@
 {
     "name": "@kithinji/tlugha",
-    "version": "1.0.17",
+    "version": "1.0.18",
     "main": "dist/main.js",
     "module": "dist/main.mjs",
     "types": "dist/main.d.ts",
